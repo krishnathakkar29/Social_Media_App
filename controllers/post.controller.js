@@ -31,7 +31,6 @@ exports.likeAndUnlikePost = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Post not found");
   }
 
-
   if (post.likes.includes(req.user._id)) {
     const index = post.likes.indexOf(req.user?._id);
     post.likes.splice(index, 1);
@@ -52,3 +51,39 @@ exports.likeAndUnlikePost = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, {}, "Post is liked by user successfully"));
   }
 });
+
+exports.deletePost = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  console.log("Post ka id is :- ", post._id)
+  console.log(post)
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+  const user = await User.findById(req.user?._id);
+
+  //checking if correct user is there to delete
+  if (post.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(401, "YOu are unauthorized to delete the post");
+  }
+
+  await post.deleteOne();
+
+  const index = user.posts.indexOf(req.params.id);
+  user.posts.splice(index, 1);
+  await user.save({ validateBeforeSave: false });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {},
+      "Post is deleted Successfully"
+    )
+  )
+
+});
+
+exports.getPostOfFollowing = asyncHandler(async (req,res) => {
+  
+})

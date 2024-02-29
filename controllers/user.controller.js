@@ -26,7 +26,6 @@ const generateAccessAndRefreshTokens = async (userid) => {
   }
 };
 
-
 exports.register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -77,7 +76,6 @@ exports.register = asyncHandler(async (req, res) => {
         "User logged in successfully"
       )
     );
-
 });
 
 exports.login = asyncHandler(async (req, res) => {
@@ -122,4 +120,40 @@ exports.login = asyncHandler(async (req, res) => {
         "User logged in successfully"
       )
     );
+});
+
+exports.followUser = asyncHandler(async (req, res) => {
+  const userToFollow = await User.findById(req.params?.id);
+  const currentLoggedInUser = await User.findById(req.user?._id);
+
+  if (!userToFollow) {
+    throw new ApiError(400, "User to follow not found");
+  }
+
+  if (currentLoggedInUser.following.includes(userToFollow._id)) {
+    const indexFollowing = currentLoggedInUser.following.indexOf(
+      userToFollow._id
+    );
+    const indexFollower = userToFollow.followers.indexOf(
+      currentLoggedInUser._id
+    );
+
+    currentLoggedInUser.following.splice(indexFollowing, 1);
+    userToFollow.followers.splice(indexFollower, 1);
+
+    await userToFollow.save();
+    await currentLoggedInUser.save();
+
+    return res.status(200).json(new ApiResponse(200, "User Unfollowed"));
+  } else {
+    currentLoggedInUser.following.push(userToFollow._id);
+    userToFollow.followers.push(currentLoggedInUser._id);
+
+    await userToFollow.save({ validateBeforeSave: false });
+    await currentLoggedInUser.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "User followed Successfully"));
+  }
 });

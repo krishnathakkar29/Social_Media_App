@@ -19,5 +19,36 @@ exports.createPost = asyncHandler(async (req, res, next) => {
   user.posts.push(post?._id);
   await user.save({ validateBeforeSave: false });
 
-  return res.status(201).json(new ApiResponse(200, { post }, "New Post Created Successfully"));
+  return res
+    .status(201)
+    .json(new ApiResponse(200, { post }, "New Post Created Successfully"));
+});
+
+exports.likeAndUnlikePost = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found");
+  }
+
+
+  if (post.likes.includes(req.user._id)) {
+    const index = post.likes.indexOf(req.user?._id);
+    post.likes.splice(index, 1);
+    await post.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "post unliked by user"));
+    // const index = post.likes.map((item,index) => {
+    //   if(item == req.user.id) return index
+    // })
+  } else {
+    post.likes.push(req.user?._id);
+    await post.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Post is liked by user successfully"));
+  }
 });

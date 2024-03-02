@@ -85,13 +85,18 @@ exports.login = asyncHandler(async (req, res) => {
     throw new ApiError(400, "email is required");
   }
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email })
 
   if (!user) {
     throw new ApiError(404, "User does not exist");
   }
+  // console.log("password valid tak pohocha ");
+  console.log(user);
+  console.log("Incoming Password:", incomingPassword);
+console.log("User Password:", user.password);
 
   const isPasswordValid = await user.isPasswordCorrect(incomingPassword);
+  // console.log("password valid ke baddddddddddddd pohocha ");
 
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid User Credentials (Password is incorrect)");

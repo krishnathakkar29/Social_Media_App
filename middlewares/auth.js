@@ -1,6 +1,8 @@
 const { asyncHandler } = require("../utils/asyncHandler");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
+const ApiError = require("../utils/ApiError");
+
 exports.verifyJWT = asyncHandler(async (req, res, next) => {
   try {
     const token =
@@ -12,9 +14,9 @@ exports.verifyJWT = asyncHandler(async (req, res, next) => {
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
+    //-password daalna hai
     const user = await User.findById(decodedToken?._id).select(
-      "-password -refreshToken"
+      " -refreshToken"
     );
 
     if (!user) {
@@ -27,6 +29,6 @@ exports.verifyJWT = asyncHandler(async (req, res, next) => {
     throw new ApiError(
       401,
       error?.message || "Invalid access token (catch block in auth)"
-    ); 
+    );
   }
 });

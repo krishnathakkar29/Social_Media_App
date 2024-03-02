@@ -55,8 +55,8 @@ exports.likeAndUnlikePost = asyncHandler(async (req, res) => {
 exports.deletePost = asyncHandler(async (req, res) => {
   const post = await Post.findById(req.params.id);
 
-  console.log("Post ka id is :- ", post._id)
-  console.log(post)
+  console.log("Post ka id is :- ", post._id);
+  console.log(post);
   if (!post) {
     throw new ApiError(404, "Post not found");
   }
@@ -74,16 +74,26 @@ exports.deletePost = asyncHandler(async (req, res) => {
   user.posts.splice(index, 1);
   await user.save({ validateBeforeSave: false });
 
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Post is deleted Successfully"));
+});
+
+exports.getPostOfFollowing = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
   return res.status(200).json(
     new ApiResponse(
       200,
-      {},
-      "Post is deleted Successfully"
+      user
     )
-  )
+  );
 
+  // const arrayOfIdOfPostsOfFollowing = user.following.map(async (follow) => {
+  //   return await User.findById(follow).posts
+  // })
+
+  // const postsArray = arrayOfIdOfPostsOfFollowing.map(async (postId) => {
+  //   return await Post.findById(postId)
+  // })
 });
-
-exports.getPostOfFollowing = asyncHandler(async (req,res) => {
-  
-})

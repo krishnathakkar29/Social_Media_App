@@ -82,12 +82,13 @@ exports.deletePost = asyncHandler(async (req, res) => {
 exports.getPostOfFollowing = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      user
-    )
-  );
+  const posts = await Post.find({
+    owner: {
+      $in: user.following
+    }
+  })
+
+  return res.status(200).json(new ApiResponse(200, posts, "Retrieved posts of the following successfully"));
 
   // const arrayOfIdOfPostsOfFollowing = user.following.map(async (follow) => {
   //   return await User.findById(follow).posts

@@ -16,5 +16,6 @@ router
   .get(verifyJWT, likeAndUnlikePost)
   .delete(verifyJWT, deletePost);
 
-router.route("/post/following-posts").get(verifyJWT, getPostOfFollowing);
+
+router.route("/getFollowing").get(verifyJWT, getPostOfFollowing)
 module.exports = router;

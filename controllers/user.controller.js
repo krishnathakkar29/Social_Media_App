@@ -85,7 +85,7 @@ exports.login = asyncHandler(async (req, res) => {
     throw new ApiError(400, "email is required");
   }
 
-  const user = await User.findOne({ email })
+  const user = await User.findOne({ email });
 
   if (!user) {
     throw new ApiError(404, "User does not exist");
@@ -93,7 +93,7 @@ exports.login = asyncHandler(async (req, res) => {
   // console.log("password valid tak pohocha ");
   console.log(user);
   console.log("Incoming Password:", incomingPassword);
-console.log("User Password:", user.password);
+  console.log("User Password:", user.password);
 
   const isPasswordValid = await user.isPasswordCorrect(incomingPassword);
   // console.log("password valid ke baddddddddddddd pohocha ");
@@ -125,6 +125,23 @@ console.log("User Password:", user.password);
         "User logged in successfully"
       )
     );
+});
+
+exports.logoutUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id);
+
+  user.refreshToken = undefined;
+  await user.save();
+
+  if (user.refreshToken) {
+    throw new ApiError(500, "Error while logging out");
+  }
+
+  res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
 exports.followUser = asyncHandler(async (req, res) => {
@@ -161,4 +178,48 @@ exports.followUser = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, "User followed Successfully"));
   }
+});
+
+exports.updatePassword = asyncHandler(async (req, res) => {
+  const { incomingPassword, newPassword } = req.body;
+
+  if (!incomingPassword && !newPassword) {
+    throw new ApiError(404, "Passwords in the body not found");
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+
+  const checkPass = await user.isPasswordCorrect(incomingPassword);
+
+  console.log(incomingPassword)
+  console.log(newPassword)
+  if (!checkPass) {
+    throw new ApiError(400, "Incorrect incoming old password");
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password updated Successfully"));
+});
+
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const { email, name } = req.body;
+  const user = await User.findById(req.user._id);
+  if (email) {
+    user.email = email;
+  }
+  if (name) {
+    user.name = name;
+  }
+
+  //TODO user avatrr
+
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "User Update Successfull"));
 });

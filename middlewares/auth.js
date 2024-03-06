@@ -10,7 +10,7 @@ exports.verifyJWT = asyncHandler(async (req, res, next) => {
       req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) {
-      throw new ApiError(401, "Unautthorized Request, (issue in token)");
+      throw new ApiError(401, "Unautthorized Request, (issue in token), middleware mein");
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);

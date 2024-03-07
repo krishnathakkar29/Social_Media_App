@@ -1,7 +1,10 @@
 const User = require("../models/user.model");
+const Post = require("../models/post.model");
 const { asyncHandler } = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
+const { sendEmail } = require("../middlewares/sendEmail");
+const crypto = require("crypto");
 
 const options = {
   httpOnly: true,
@@ -226,13 +229,14 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 
 exports.deleteProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
+  const userIDtodelete = req.user._id;
   const posts = user.posts;
   const followers = user.followers;
   const following = user.following;
   const userID = user._id;
 
   user.refreshToken = undefined;
-  await user.remove();
+  await User.findByIdAndDelete(userIDtodelete);
 
   //clearing cookies , logout
   res.clearCookie("accessToken", options);
@@ -292,4 +296,70 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
   const allUsers = await User.find({});
 
   return res.status(200).json(new ApiResponse(200, allUsers));
+});
+
+exports.forgotPassword = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    throw new ApiError(404, "User to forgot password not found");
+  }
+
+  const resetPasswordToken = user.getResetPasswordToken();
+
+  //because i have edited the value of passHash
+  await user.save();
+
+  const resetUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/password/reset/${resetPasswordToken}`;
+
+  const message = `Reset your password by clickig on the link below\n\n ${resetUrl}`;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Reset your Password for the social media app",
+      message,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Email sent to ${user.email}`,
+    });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpiry = undefined;
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const resetPassToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken: resetPassToken,
+    resetPasswordTokenExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      message: "Token is invalid or expired",
+    });
+  }
+
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordTokenExpiry = undefined;
+  await user.save();
+
+  res.status(200).json(new ApiResponse(200, "Password Updated Succesfully"));
 });

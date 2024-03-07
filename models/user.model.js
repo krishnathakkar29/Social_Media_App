@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -48,16 +49,17 @@ const userSchema = new mongoose.Schema({
       ref: "User",
     },
   ],
-  
+
+  resetPasswordToken: String,
+  resetPasswordTokenExpiry: Date,
 });
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
-userSchema.pre("save", async function(next){
-  if(!this.isModified("password")) return next()
-
-  this.password = await bcrypt.hash(this.password, 10)
-  next()
-})
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
+});
 
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
@@ -91,6 +93,18 @@ userSchema.methods.generateRefreshToken = function () {
   );
 };
 
+userSchema.methods.getResetPasswordToken = function () {
+  const resetTokenGenerate = crypto.randomBytes(20).toString("hex");
+  console.log(resetTokenGenerate);
 
+  this.resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(resetTokenGenerate)
+    .digest("hex");
+
+  this.resetPasswordTokenExpiry = Date.now() + 10 * 60 * 1000; //valid for 10minutres
+
+  return resetTokenGenerate
+};
 
 module.exports = mongoose.model("User", userSchema);

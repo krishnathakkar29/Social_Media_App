@@ -10,6 +10,8 @@ const {
   myProfile,
   getUserProfile,
   getAllUsers,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/user.controller");
 const { verifyJWT } = require("../middlewares/auth");
 // const { verify } = require("jsonwebtoken");
@@ -27,4 +29,6 @@ router.route("/delete/me").delete(verifyJWT, deleteProfile);
 router.route("/myProfile").get(verifyJWT, myProfile);
 router.route("/user/:id").get(verifyJWT, getUserProfile);
 router.route("/allUsers").get(verifyJWT, getAllUsers);
+router.route("/forgot/password").post(forgotPassword);
+router.route("/password/reset/:token").put(resetPassword);
 module.exports = router;

@@ -191,8 +191,8 @@ exports.updatePassword = asyncHandler(async (req, res) => {
 
   const checkPass = await user.isPasswordCorrect(incomingPassword);
 
-  console.log(incomingPassword)
-  console.log(newPassword)
+  console.log(incomingPassword);
+  console.log(newPassword);
   if (!checkPass) {
     throw new ApiError(400, "Incorrect incoming old password");
   }
@@ -222,4 +222,74 @@ exports.updateProfile = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "User Update Successfull"));
+});
+
+exports.deleteProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const posts = user.posts;
+  const followers = user.followers;
+  const following = user.following;
+  const userID = user._id;
+
+  user.refreshToken = undefined;
+  await user.remove();
+
+  //clearing cookies , logout
+  res.clearCookie("accessToken", options);
+  res.clearCookie("refreshToken", options);
+
+  //removing user from followers following
+  for (let i = 0; i < followers.length; i++) {
+    const follower = await User.findById(followers[i]);
+
+    const index = follower.following.indexOf(userID);
+    follower.following.splice(index, 1);
+    await follower.save();
+  }
+
+  //removing user from following's follower
+  for (let i = 0; i < following.length; i++) {
+    const follows = await User.findById(following[i]);
+
+    const index = follows.followers.indexOf(userID);
+    follows.followers.splice(index, 1);
+    await follows.save();
+  }
+  //deleting posts
+  for (let i = 0; i < posts.length; i++) {
+    const post = await Post.findById(posts[i]);
+    await post.remove();
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Profile deleted Successfully"));
+});
+
+exports.myProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id)
+    .populate("posts")
+    .select("-password -refreshToken");
+
+  return res.status(200).json(new ApiResponse(200, user, "user details"));
+});
+
+exports.getUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).populate("posts");
+
+  if (!user) {
+    throw new ApiError(
+      404,
+      "Requested User not found in getUserProfile controller"
+    );
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User details fetched Successfully"));
+});
+
+exports.getAllUsers = asyncHandler(async (req, res) => {
+  const allUsers = await User.find({});
+
+  return res.status(200).json(new ApiResponse(200, allUsers));
 });

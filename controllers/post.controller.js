@@ -2,6 +2,7 @@ const Post = require("../models/post.model");
 const User = require("../models/user.model");
 const { asyncHandler } = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
+const ApiError  = require("../utils/ApiError")
 
 exports.createPost = asyncHandler(async (req, res, next) => {
   const newPostData = {
@@ -84,11 +85,19 @@ exports.getPostOfFollowing = asyncHandler(async (req, res) => {
 
   const posts = await Post.find({
     owner: {
-      $in: user.following
-    }
-  })
+      $in: user.following,
+    },
+  });
 
-  return res.status(200).json(new ApiResponse(200, posts, "Retrieved posts of the following successfully"));
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        posts,
+        "Retrieved posts of the following successfully"
+      )
+    );
 
   // const arrayOfIdOfPostsOfFollowing = user.following.map(async (follow) => {
   //   return await User.findById(follow).posts
@@ -97,4 +106,103 @@ exports.getPostOfFollowing = asyncHandler(async (req, res) => {
   // const postsArray = arrayOfIdOfPostsOfFollowing.map(async (postId) => {
   //   return await Post.findById(postId)
   // })
+});
+
+exports.updateCaption = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found , incorrect id");
+  }
+
+  if (post.owner.toString() !== req.user._id.toString()) {
+    throw new ApiError(
+      401,
+      "Your are unauthorized to update other account's post"
+    );
+  }
+  const { caption } = req.body;
+
+  post.caption = caption;
+  await post.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Caption Updated Successfully"));
+});
+
+exports.addComment = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  if (!post) {
+    throw new ApiError(400, "Post not found addComment controller");
+  }
+
+  let commentExists = -1;
+  // let commentIndex = -1;
+  post.comments.forEach((elem, index) => {
+    if (elem.user.toString() == req.user._id.toString()) {
+      commentExists = index;
+      // commentIndex = index;
+    }
+  });
+
+  if (commentExists !== -1) {
+    post.comments[commentExists].comment = req.body.comment;
+    await post.save();
+    return res.status(200).json(new ApiResponse(200, "Comment Updated"));
+  } else {
+    post.comments.push({
+      user: req.user._id,
+      comment: req.body.comment,
+    });
+    await post.save();
+    return res.status(200).json(new ApiResponse(200, "Comment added"));
+  }
+});
+
+exports.deleteComment = asyncHandler(async (req, res) => {
+  const post = await Post.findById(req.params.id);
+
+  if (!post) {
+    throw new ApiError(404, "Post not found (in deleteComment controller)");
+  }
+
+  if (post.owner.toString() == req.user._id.toString()) {
+    if (req.body.commentId == undefined) {
+      throw new ApiError(
+        400,
+        "id of the comment not found, commentID required"
+      );
+    }
+
+    post.comments.forEach((elem, index) => {
+      if (elem._id.toString() == req.body.commentId.toString()) {
+        return post.comments.splice(index, 1);
+      }
+    });
+
+    await post.save();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Selected Comment is deleted"));
+  } else {
+    post.comments.forEach((elem, index) => {
+      if (elem.user.toString() === req.user._id.toString()) {
+        post.comments.splice(index, 1);
+      }
+    });
+
+    await post.save();
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "Your Comment is deleted , Comment of user deleted Successfully"
+        )
+      );
+  }
 });

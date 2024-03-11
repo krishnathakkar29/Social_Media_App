@@ -2,7 +2,7 @@ const Post = require("../models/post.model");
 const User = require("../models/user.model");
 const { asyncHandler } = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
-const ApiError  = require("../utils/ApiError")
+const ApiError = require("../utils/ApiError");
 
 exports.createPost = asyncHandler(async (req, res, next) => {
   const newPostData = {
@@ -87,17 +87,16 @@ exports.getPostOfFollowing = asyncHandler(async (req, res) => {
     owner: {
       $in: user.following,
     },
-  });
+  }).populate("owner likes comments.user");
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        posts,
-        "Retrieved posts of the following successfully"
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { posts: posts.reverse() },
+
+      "Retrieved posts of the following successfully"
+    )
+  );
 
   // const arrayOfIdOfPostsOfFollowing = user.following.map(async (follow) => {
   //   return await User.findById(follow).posts
